@@ -11,15 +11,3 @@ export class InterestEvent extends Event {
     return this.#interest;
   }
 }
-
-export function getContextInterest<ContextMap>(
-  name: Extract<keyof ContextMap, string>,
-): string {
-  return `context:${name}`;
-}
-
-export class ContextInterestEvent<ContextMap> extends InterestEvent {
-  constructor(name: Extract<keyof ContextMap, string>) {
-    super(getContextInterest(name));
-  }
-}

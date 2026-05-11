@@ -1,9 +1,9 @@
 import { attachMessageEventTarget, StateEngine, StateReducer } from '@/main';
 
-class DemoStateReducer<State, ReducerInit, ContextMap> extends StateReducer<
+class DemoStateReducer<State, ReducerInit, ContextValue> extends StateReducer<
   State,
   ReducerInit,
-  ContextMap
+  ContextValue
 > {
   async reduce(_prevState: State): Promise<State> {
     return undefined as State;
@@ -14,8 +14,8 @@ class DemoStateReducer<State, ReducerInit, ContextMap> extends StateReducer<
   }
 }
 
-const engine = new StateEngine({
-  createReducer: (engine, init, callback) =>
+const engine = new StateEngine(
+  (engine, init, callback) =>
     new DemoStateReducer<unknown, unknown, unknown>(engine, init, callback),
-});
+);
 attachMessageEventTarget(engine, parent);

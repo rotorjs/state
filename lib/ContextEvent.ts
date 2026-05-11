@@ -1,19 +1,10 @@
-export class ContextEvent<ContextMap> extends Event {
-  #name;
+export class ContextEvent<ContextValue> extends Event {
   #value;
 
-  constructor(
-    name: Extract<keyof ContextMap, string>,
-    value: ContextMap[typeof name],
-  ) {
+  constructor(value: ContextValue) {
     super('context');
 
-    this.#name = name;
     this.#value = value;
-  }
-
-  get name() {
-    return this.#name;
   }
 
   get value() {

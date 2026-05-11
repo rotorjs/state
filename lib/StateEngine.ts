@@ -1,9 +1,7 @@
-import { ContextEvent } from './ContextEvent';
-import { ContextInterestEvent } from './InterestEvent';
 import { StateEvent } from './StateEvent';
 import { StateEventTarget } from './StateEventTarget';
 
-export abstract class StateReducer<State, ReducerInit, ContextMap> {
+export abstract class StateReducer<State, ReducerInit, ContextValue> {
   #engine;
   #queue: Promise<State>;
   #callback;
@@ -12,7 +10,7 @@ export abstract class StateReducer<State, ReducerInit, ContextMap> {
   #controller = new AbortController();
 
   constructor(
-    engine: StateEngine<State, ReducerInit, ContextMap>,
+    engine: StateEngine<State, ReducerInit, ContextValue>,
     initialState: State,
     callback: (state: State) => void,
   ) {
@@ -91,39 +89,31 @@ export abstract class StateReducer<State, ReducerInit, ContextMap> {
   }
 }
 
-export interface CreateStateReducerFunction<State, ReducerInit, ContextMap> {
+export interface CreateStateReducerFunction<State, ReducerInit, ContextValue> {
   (
-    engine: StateEngine<State, ReducerInit, ContextMap>,
+    engine: StateEngine<State, ReducerInit, ContextValue>,
     init: ReducerInit,
     callback: (state: State) => void,
-  ): StateReducer<State, ReducerInit, ContextMap>;
+  ): StateReducer<State, ReducerInit, ContextValue>;
 }
-
-export type StateEngineInit<State, ReducerInit, ContextMap> = {
-  createReducer: CreateStateReducerFunction<State, ReducerInit, ContextMap>;
-  initialContexts?: ContextMap;
-};
 
 export class StateEngine<
   State,
   ReducerInit,
-  ContextMap,
-> extends StateEventTarget<State, ReducerInit, ContextMap> {
+  ContextValue,
+> extends StateEventTarget<State, ReducerInit, ContextValue> {
   #createReducer;
   #reducers: {
-    [id: string]: StateReducer<State, ReducerInit, ContextMap>;
+    [id: string]: StateReducer<State, ReducerInit, ContextValue>;
   } = {};
-  #contexts: { [name in keyof ContextMap]?: ContextMap[name] };
   #controller = new AbortController();
 
-  constructor({
-    createReducer,
-    initialContexts,
-  }: StateEngineInit<State, ReducerInit, ContextMap>) {
+  constructor(
+    createReducer: CreateStateReducerFunction<State, ReducerInit, ContextValue>,
+  ) {
     super();
 
     this.#createReducer = createReducer;
-    this.#contexts = initialContexts ?? {};
 
     const signal = this.#controller.signal;
 
@@ -152,19 +142,6 @@ export class StateEngine<
           this.#reducers[event.id].stop();
           delete this.#reducers[event.id];
         }
-      },
-      { signal },
-    );
-
-    this.addEventListener(
-      'set-context',
-      (event) => {
-        this.#contexts[event.name] = event.value;
-
-        this.dispatchEvent(
-          new ContextEvent<ContextMap>(event.name, event.value),
-        );
-        this.dispatchEvent(new ContextInterestEvent(event.name));
       },
       { signal },
     );

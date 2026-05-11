@@ -3,7 +3,6 @@ export * from './InterestEvent';
 export * from './MessageTarget';
 export * from './RegisterReducerEvent';
 export * from './RemoveReducerEvent';
-export * from './SetContextEvent';
 export * from './StateEngine';
 export * from './StateEvent';
 export * from './StateEventTarget';
