@@ -1,5 +1,6 @@
 export class RemoveReducerEvent extends Event {
   #id;
+  emitter?: string;
 
   constructor(id: string) {
     super('remove-reducer');

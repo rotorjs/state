@@ -1,7 +1,7 @@
 import { StateEvent } from './StateEvent';
 import { StateEventTarget } from './StateEventTarget';
 
-export abstract class StateReducer<State, ReducerInit, ContextValue> {
+export abstract class StateReducer<State, ReducerInit, ContextUpdate> {
   #engine;
   #queue: Promise<State>;
   #callback;
@@ -10,7 +10,7 @@ export abstract class StateReducer<State, ReducerInit, ContextValue> {
   #controller = new AbortController();
 
   constructor(
-    engine: StateEngine<State, ReducerInit, ContextValue>,
+    engine: StateEngine<State, ReducerInit, ContextUpdate>,
     initialState: State,
     callback: (state: State) => void,
   ) {
@@ -89,27 +89,31 @@ export abstract class StateReducer<State, ReducerInit, ContextValue> {
   }
 }
 
-export interface CreateStateReducerFunction<State, ReducerInit, ContextValue> {
+export interface CreateStateReducerFunction<State, ReducerInit, ContextUpdate> {
   (
-    engine: StateEngine<State, ReducerInit, ContextValue>,
+    engine: StateEngine<State, ReducerInit, ContextUpdate>,
     init: ReducerInit,
     callback: (state: State) => void,
-  ): StateReducer<State, ReducerInit, ContextValue>;
+  ): StateReducer<State, ReducerInit, ContextUpdate>;
 }
 
 export class StateEngine<
   State,
   ReducerInit,
-  ContextValue,
-> extends StateEventTarget<State, ReducerInit, ContextValue> {
+  ContextUpdate,
+> extends StateEventTarget<State, ReducerInit, ContextUpdate> {
   #createReducer;
   #reducers: {
-    [id: string]: StateReducer<State, ReducerInit, ContextValue>;
+    [id: string]: StateReducer<State, ReducerInit, ContextUpdate>;
   } = {};
   #controller = new AbortController();
 
   constructor(
-    createReducer: CreateStateReducerFunction<State, ReducerInit, ContextValue>,
+    createReducer: CreateStateReducerFunction<
+      State,
+      ReducerInit,
+      ContextUpdate
+    >,
   ) {
     super();
 

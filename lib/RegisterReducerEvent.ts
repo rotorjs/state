@@ -1,6 +1,7 @@
 export class RegisterReducerEvent<ReducerInit> extends Event {
   #id;
   #init;
+  emitter?: string;
 
   constructor(id: string, init: ReducerInit) {
     super('register-reducer');

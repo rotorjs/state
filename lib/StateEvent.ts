@@ -1,6 +1,7 @@
 export class StateEvent<State> extends Event {
   #id;
   #state;
+  emitter?: string;
 
   constructor(id: string, state: State) {
     super('state');

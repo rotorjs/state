@@ -1,13 +1,14 @@
-export class ContextEvent<ContextValue> extends Event {
-  #value;
+export class ContextEvent<ContextUpdate> extends Event {
+  #update;
+  emitter?: string;
 
-  constructor(value: ContextValue) {
+  constructor(update: ContextUpdate) {
     super('context');
 
-    this.#value = value;
+    this.#update = update;
   }
 
-  get value() {
-    return this.#value;
+  get update() {
+    return this.#update;
   }
 }
