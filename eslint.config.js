@@ -5,10 +5,12 @@ import prettier from 'eslint-plugin-prettier/recommended';
 import reactHooks from 'eslint-plugin-react-hooks';
 import { reactRefresh } from 'eslint-plugin-react-refresh';
 import globals from 'globals';
+import { configs as tseslintConfigs } from 'typescript-eslint';
 
 export default [
   // globalIgnores(['dist']),
   js.configs.recommended,
+  tseslintConfigs.recommended,
   importX.flatConfigs.recommended,
   importX.flatConfigs.typescript,
   reactHooks.configs.flat.recommended,
@@ -21,6 +23,12 @@ export default [
       ecmaVersion: 'latest',
       sourceType: 'module',
       globals: globals.browser,
+    },
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { enableAutofixRemoval: { imports: true } },
+      ],
     },
   },
 ];

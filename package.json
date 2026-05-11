@@ -40,10 +40,6 @@
     "postversion": "git commit -am$npm_package_version",
     "prepublishOnly": "npm run build"
   },
-  "peerDependencies": {
-    "react": ">=18.0",
-    "react-dom": ">=18.0"
-  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/react": "^19.1.12",
@@ -62,6 +58,7 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.2",
     "unplugin-dts": "^1.0.0",
     "vite": "^8.0.12"
   }
