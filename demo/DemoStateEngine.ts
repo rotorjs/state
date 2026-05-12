@@ -8,7 +8,7 @@ export type DemoState =
 
 export type DemoReducerInit = { other: boolean };
 
-export type DemoAction = 'demo action';
+export type DemoAction = 'demo action' | 'stop';
 
 export type DemoStateEventTarget = StateEventTarget<
   DemoState,
@@ -37,6 +37,8 @@ export class DemoStateReducer extends StateReducer<
   }
 
   async reduce(_prevState: DemoState): Promise<DemoState> {
+    console.log('reduce');
+
     this.clearInterests();
 
     this.engine.dispatchAction('demo action');
@@ -59,11 +61,17 @@ export class DemoStateEngine extends StateEngine<
   constructor() {
     super();
 
-    this.addEventListener('action', () => {
-      setTimeout(() => {
-        this.dispatchInterest('demo interest');
-      }, 1000);
-    });
+    const signal = this.signal;
+
+    this.addEventListener(
+      'action',
+      () => {
+        setTimeout(() => {
+          this.dispatchInterest('demo interest');
+        }, 5000);
+      },
+      { signal },
+    );
   }
 
   getState(other: boolean): DemoState {
@@ -73,7 +81,7 @@ export class DemoStateEngine extends StateEngine<
   protected createReducer(
     init: DemoReducerInit,
     callback: (state: DemoState) => void,
-  ): StateReducer<DemoState, DemoReducerInit, 'demo action'> {
+  ): StateReducer<DemoState, DemoReducerInit, 'demo action' | 'stop'> {
     return new DemoStateReducer(this, init.other, callback);
   }
 }

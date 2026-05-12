@@ -4,7 +4,7 @@ export class ActionEvent<Action> extends EmitterEvent {
   #action;
 
   constructor(action: Action) {
-    super('context');
+    super('action');
 
     this.#action = action;
   }
