@@ -1,5 +1,9 @@
 import { StateEventTarget } from './StateEventTarget';
 
+export type StateReducerOptions = {
+  debounce?: number;
+};
+
 export abstract class StateReducer<
   State,
   ReducerInit,
@@ -15,16 +19,19 @@ export abstract class StateReducer<
   #callback;
   #interests: { [interest: string]: boolean } = {};
   #pending = false;
+  #debounce;
   #controller = new AbortController();
 
   constructor(
     engine: Engine,
     initialState: State,
     callback: (state: State) => void,
+    options?: StateReducerOptions,
   ) {
     this.#engine = engine;
     this.#queue = Promise.resolve(initialState);
     this.#callback = callback;
+    this.#debounce = options?.debounce;
 
     const signal = this.signal;
 
@@ -72,7 +79,16 @@ export abstract class StateReducer<
 
     this.#pending = true;
 
-    this.#queue = this.#queue.then(async (prevState): Promise<State> => {
+    if (this.#debounce && this.#debounce > 0) {
+      this.#queue = this.#queue.then<State>(
+        (state) =>
+          new Promise((resolve) => {
+            setTimeout(() => resolve(state), this.#debounce);
+          }),
+      );
+    }
+
+    this.#queue = this.#queue.then<State>(async (prevState) => {
       this.#pending = false;
 
       if (this.signal.aborted) return prevState;
