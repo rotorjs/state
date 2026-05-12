@@ -1,10 +1,4 @@
-import {
-  ActionEvent,
-  InterestEvent,
-  StateEngine,
-  StateReducer,
-  type StateEventTarget,
-} from '@/main';
+import { StateEngine, StateReducer, type StateEventTarget } from '@/main';
 
 export type DemoState =
   | 'demo state'
@@ -45,7 +39,7 @@ export class DemoStateReducer extends StateReducer<
   async reduce(_prevState: DemoState): Promise<DemoState> {
     this.clearInterests();
 
-    this.engine.dispatchEvent(new ActionEvent('demo action'));
+    this.engine.dispatchAction('demo action');
 
     this.addInterest('demo interest');
 
@@ -67,7 +61,7 @@ export class DemoStateEngine extends StateEngine<
 
     this.addEventListener('action', () => {
       setTimeout(() => {
-        this.dispatchEvent(new InterestEvent('demo interest'));
+        this.dispatchInterest('demo interest');
       }, 1000);
     });
   }
