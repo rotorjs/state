@@ -1,14 +1,18 @@
+/* eslint-disable import-x/no-named-as-default-member */
+
 import js from '@eslint/js';
-import * as tsParser from '@typescript-eslint/parser';
 import { importX } from 'eslint-plugin-import-x';
 import prettier from 'eslint-plugin-prettier/recommended';
 import reactHooks from 'eslint-plugin-react-hooks';
 import { reactRefresh } from 'eslint-plugin-react-refresh';
+import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
+import tseslint from 'typescript-eslint';
 
-export default [
-  // globalIgnores(['dist']),
+export default defineConfig([
+  globalIgnores(['dist']),
   js.configs.recommended,
+  tseslint.configs.recommended,
   importX.flatConfigs.recommended,
   importX.flatConfigs.typescript,
   reactHooks.configs.flat.recommended,
@@ -17,10 +21,20 @@ export default [
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
-      parser: tsParser,
       ecmaVersion: 'latest',
       sourceType: 'module',
       globals: globals.browser,
     },
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          enableAutofixRemoval: { imports: true },
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+    },
   },
-];
+]);

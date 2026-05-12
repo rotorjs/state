@@ -1,0 +1,23 @@
+---
+type: pipeline
+name: publish @rotorjs/core
+
+when:
+  workerGroup:
+    include: [soldier]
+  trigger:
+    include: [commit, action]
+  file:
+    include:
+      - package.json
+      - .reeve.yaml
+    action:
+      include: [packages:@rotorjs/core:publish]
+
+steps:
+  - name: publish
+    task: '@reeve/npm-publish'
+    params:
+      NPM_LOGIN_REGISTRY: https://registry.npmjs.org
+      NPM_LOGIN_USER: { env: npm/registry.npmjs.org/user }
+      NPM_LOGIN_PASSWORD: { env: npm/registry.npmjs.org/password }
