@@ -1,32 +1,39 @@
-import { ContextEvent } from './ContextEvent';
+import { v7 as uuid } from 'uuid';
+import { ActionEvent } from './ActionEvent';
 import { InterestEvent } from './InterestEvent';
 import { RegisterReducerEvent } from './RegisterReducerEvent';
 import { RemoveReducerEvent } from './RemoveReducerEvent';
 import { StateEvent } from './StateEvent';
 import { StateEventTarget } from './StateEventTarget';
-import { v7 as uuid } from 'uuid';
 
-export interface MessageTarget<T> extends MessageEventTarget<T> {
-  postMessage(message: any): void;
-}
+type StateMessage =
+  | { type: 'action'; action: unknown }
+  | { type: 'interest'; interest: string }
+  | { type: 'register-reducer'; id: string; init: unknown }
+  | { type: 'remove-reducer'; id: string }
+  | { type: 'state'; id: string; state: unknown };
 
-export type MessageTargetEventOptions = {
+export type AttachStateEventTargetOptions = {
   signal?: AbortSignal;
 };
 
-export function attachMessageEventTarget<T>(
+export function attachStateEventTarget<T>(
   target: StateEventTarget<unknown, unknown, unknown>,
-  messageTarget: MessageTarget<T>,
-  options?: MessageTargetEventOptions,
+  addEventListener: MessageEventTarget<T>['addEventListener'],
+  postMessage: (message: unknown, transfer?: Transferable[]) => void,
+  options?: AttachStateEventTargetOptions,
 ): void {
   const id = uuid();
   const signal = options?.signal;
 
   target.addEventListener(
-    'context',
+    'action',
     (event) => {
       if (event.emitter === id) return;
-      messageTarget.postMessage({ type: 'context', update: event.update });
+      postMessage({
+        type: 'action',
+        action: event.action,
+      } satisfies StateMessage);
     },
     { signal },
   );
@@ -35,7 +42,10 @@ export function attachMessageEventTarget<T>(
     'interest',
     (event) => {
       if (event.emitter === id) return;
-      messageTarget.postMessage({ type: 'interest', interest: event.interest });
+      postMessage({
+        type: 'interest',
+        interest: event.interest,
+      } satisfies StateMessage);
     },
     { signal },
   );
@@ -44,11 +54,11 @@ export function attachMessageEventTarget<T>(
     'register-reducer',
     (event) => {
       if (event.emitter === id) return;
-      messageTarget.postMessage({
+      postMessage({
         type: 'register-reducer',
         id: event.id,
         init: event.init,
-      });
+      } satisfies StateMessage);
     },
     { signal },
   );
@@ -57,10 +67,10 @@ export function attachMessageEventTarget<T>(
     'remove-reducer',
     (event) => {
       if (event.emitter === id) return;
-      messageTarget.postMessage({
+      postMessage({
         type: 'remove-reducer',
         id: event.id,
-      });
+      } satisfies StateMessage);
     },
     { signal },
   );
@@ -69,49 +79,51 @@ export function attachMessageEventTarget<T>(
     'state',
     (event) => {
       if (event.emitter === id) return;
-      messageTarget.postMessage({
+      postMessage({
         type: 'state',
         id: event.id,
         state: event.state,
-      });
+      } satisfies StateMessage);
     },
     { signal },
   );
 
-  messageTarget.addEventListener(
+  addEventListener(
     'message',
     (event) => {
-      switch (event.data.type) {
-        case 'context': {
-          const e = new ContextEvent(event.data.update);
+      const message: StateMessage = event.data;
+
+      switch (message.type) {
+        case 'action': {
+          const e = new ActionEvent(message.action);
           e.emitter = id;
           target.dispatchEvent(e);
           return;
         }
 
         case 'interest': {
-          const e = new InterestEvent(event.data.interest);
+          const e = new InterestEvent(message.interest);
           e.emitter = id;
           target.dispatchEvent(e);
           return;
         }
 
         case 'register-reducer': {
-          const e = new RegisterReducerEvent(event.data.id, event.data.init);
+          const e = new RegisterReducerEvent(message.id, message.init);
           e.emitter = id;
           target.dispatchEvent(e);
           return;
         }
 
         case 'remove-reducer': {
-          const e = new RemoveReducerEvent(event.data.id);
+          const e = new RemoveReducerEvent(message.id);
           e.emitter = id;
           target.dispatchEvent(e);
           return;
         }
 
         case 'state': {
-          const e = new StateEvent(event.data.id, event.data.state);
+          const e = new StateEvent(message.id, message.state);
           e.emitter = id;
           target.dispatchEvent(e);
           return;
@@ -122,14 +134,31 @@ export function attachMessageEventTarget<T>(
   );
 }
 
-export function wrapMessageEventTarget<State, ReducerInit, ContextUpdate, T>(
-  messageTarget: MessageTarget<T>,
-  options?: MessageTargetEventOptions,
-): StateEventTarget<State, ReducerInit, ContextUpdate> {
-  const target = new StateEventTarget<State, ReducerInit, ContextUpdate>();
-  attachMessageEventTarget(
+export interface WorkerLike<T> extends MessageEventTarget<T> {
+  postMessage(message: unknown, transfer?: Transferable[]): void;
+}
+
+export function attachWorker<T>(
+  target: StateEventTarget<unknown, unknown, unknown>,
+  worker: WorkerLike<T>,
+  options?: AttachStateEventTargetOptions,
+): void {
+  attachStateEventTarget(
+    target,
+    worker.addEventListener.bind(worker),
+    worker.postMessage.bind(worker),
+    options,
+  );
+}
+
+export function wrapWorker<State, ReducerInit, Action, T>(
+  worker: WorkerLike<T>,
+  options?: AttachStateEventTargetOptions,
+): StateEventTarget<State, ReducerInit, Action> {
+  const target = new StateEventTarget<State, ReducerInit, Action>();
+  attachWorker(
     target as StateEventTarget<unknown, unknown, unknown>,
-    messageTarget,
+    worker,
     options,
   );
   return target;

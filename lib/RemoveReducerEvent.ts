@@ -1,6 +1,7 @@
-export class RemoveReducerEvent extends Event {
+import { EmitterEvent } from './EmitterEvent';
+
+export class RemoveReducerEvent extends EmitterEvent {
   #id;
-  emitter?: string;
 
   constructor(id: string) {
     super('remove-reducer');

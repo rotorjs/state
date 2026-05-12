@@ -1,6 +1,7 @@
-export class InterestEvent extends Event {
+import { EmitterEvent } from './EmitterEvent';
+
+export class InterestEvent extends EmitterEvent {
   #interest;
-  emitter?: string;
 
   constructor(interest: string) {
     super('interest');

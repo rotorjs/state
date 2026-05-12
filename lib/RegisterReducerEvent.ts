@@ -1,7 +1,8 @@
-export class RegisterReducerEvent<ReducerInit> extends Event {
+import { EmitterEvent } from './EmitterEvent';
+
+export class RegisterReducerEvent<ReducerInit> extends EmitterEvent {
   #id;
   #init;
-  emitter?: string;
 
   constructor(id: string, init: ReducerInit) {
     super('register-reducer');

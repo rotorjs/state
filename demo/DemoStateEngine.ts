@@ -1,87 +1,92 @@
-import { ContextEvent } from '@/ContextEvent';
-import { InterestEvent } from '@/InterestEvent';
 import {
+  ActionEvent,
+  InterestEvent,
   StateEngine,
   StateReducer,
-  type CreateStateReducerFunction,
-} from '@/StateEngine';
-import type { StateEventTarget } from '@/StateEventTarget';
+  type StateEventTarget,
+} from '@/main';
 
 export type DemoState =
   | 'demo state'
+  | 'updated demo state'
   | 'other demo state'
-  | 'updated demo state';
+  | 'extended demo state';
 
 export type DemoReducerInit = { other: boolean };
 
-export type DemoContextUpdate = 'demo context update';
+export type DemoAction = 'demo action';
 
 export type DemoStateEventTarget = StateEventTarget<
   DemoState,
   DemoReducerInit,
-  DemoContextUpdate
+  DemoAction
 >;
 
 export class DemoStateReducer extends StateReducer<
   DemoState,
   DemoReducerInit,
-  DemoContextUpdate
+  DemoAction,
+  DemoStateEngine
 > {
+  #other: boolean;
+
   constructor(
     engine: DemoStateEngine,
-    initialState: DemoState,
+    other: boolean,
     callback: (state: DemoState) => void,
   ) {
-    super(engine, initialState, callback);
+    super(engine, 'demo state', callback);
+
+    this.#other = other;
 
     this.update();
   }
 
-  async reduce(prevState: DemoState): Promise<DemoState> {
+  async reduce(_prevState: DemoState): Promise<DemoState> {
     this.clearInterests();
 
-    this.engine.dispatchEvent(new ContextEvent('demo context update'));
+    this.engine.dispatchEvent(new ActionEvent('demo action'));
 
     this.addInterest('demo interest');
 
-    return 'updated demo state';
+    return this.engine.getState(this.#other);
   }
 
-  recover(prevState: DemoState, _error: unknown): DemoState {
-    return prevState;
+  recover(_prevState: DemoState, error: unknown): DemoState {
+    throw error;
   }
-}
-
-export function createDemoStateReducer(
-  engine: DemoStateEngine,
-  init: DemoReducerInit,
-  callback: (state: DemoState) => void,
-) {
-  return new DemoStateReducer(
-    engine,
-    init.other ? 'other demo state' : 'demo state',
-    callback,
-  );
 }
 
 export class DemoStateEngine extends StateEngine<
   DemoState,
   DemoReducerInit,
-  DemoContextUpdate
+  DemoAction
 > {
-  constructor(
-    createReducer: CreateStateReducerFunction<
-      DemoState,
-      DemoReducerInit,
-      DemoContextUpdate
-    >,
-  ) {
-    super(createReducer);
+  constructor() {
+    super();
 
-    this.addEventListener('context', () => {
+    this.addEventListener('action', () => {
       setTimeout(() => {
         this.dispatchEvent(new InterestEvent('demo interest'));
       }, 1000);
     });
+  }
+
+  getState(other: boolean): DemoState {
+    return other ? 'other demo state' : 'updated demo state';
+  }
+
+  protected createReducer(
+    init: DemoReducerInit,
+    callback: (state: DemoState) => void,
+  ): StateReducer<DemoState, DemoReducerInit, 'demo action'> {
+    return new DemoStateReducer(this, init.other, callback);
+  }
+}
+
+export class ExtendedDemoStateEngine extends DemoStateEngine {
+  getState(other: boolean): DemoState {
+    if (other) return super.getState(other);
+    return 'extended demo state';
   }
 }

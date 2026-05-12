@@ -1,7 +1,8 @@
-export class StateEvent<State> extends Event {
+import { EmitterEvent } from './EmitterEvent';
+
+export class StateEvent<State> extends EmitterEvent {
   #id;
   #state;
-  emitter?: string;
 
   constructor(id: string, state: State) {
     super('state');

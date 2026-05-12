@@ -1,7 +1,16 @@
 import { StateEvent } from './StateEvent';
 import { StateEventTarget } from './StateEventTarget';
 
-export abstract class StateReducer<State, ReducerInit, ContextUpdate> {
+export abstract class StateReducer<
+  State,
+  ReducerInit,
+  Action,
+  Engine extends StateEngine<State, ReducerInit, Action> = StateEngine<
+    State,
+    ReducerInit,
+    Action
+  >,
+> {
   #engine;
   #queue: Promise<State>;
   #callback;
@@ -10,7 +19,7 @@ export abstract class StateReducer<State, ReducerInit, ContextUpdate> {
   #controller = new AbortController();
 
   constructor(
-    engine: StateEngine<State, ReducerInit, ContextUpdate>,
+    engine: Engine,
     initialState: State,
     callback: (state: State) => void,
   ) {
@@ -29,6 +38,8 @@ export abstract class StateReducer<State, ReducerInit, ContextUpdate> {
       },
       { signal },
     );
+
+    this.#callback(initialState);
   }
 
   get engine() {
@@ -89,35 +100,18 @@ export abstract class StateReducer<State, ReducerInit, ContextUpdate> {
   }
 }
 
-export interface CreateStateReducerFunction<State, ReducerInit, ContextUpdate> {
-  (
-    engine: StateEngine<State, ReducerInit, ContextUpdate>,
-    init: ReducerInit,
-    callback: (state: State) => void,
-  ): StateReducer<State, ReducerInit, ContextUpdate>;
-}
-
-export class StateEngine<
+export abstract class StateEngine<
   State,
   ReducerInit,
-  ContextUpdate,
-> extends StateEventTarget<State, ReducerInit, ContextUpdate> {
-  #createReducer;
+  Action,
+> extends StateEventTarget<State, ReducerInit, Action> {
   #reducers: {
-    [id: string]: StateReducer<State, ReducerInit, ContextUpdate>;
+    [id: string]: StateReducer<State, ReducerInit, Action>;
   } = {};
   #controller = new AbortController();
 
-  constructor(
-    createReducer: CreateStateReducerFunction<
-      State,
-      ReducerInit,
-      ContextUpdate
-    >,
-  ) {
+  constructor() {
     super();
-
-    this.#createReducer = createReducer;
 
     const signal = this.#controller.signal;
 
@@ -128,13 +122,9 @@ export class StateEngine<
           this.#reducers[event.id].stop();
         }
 
-        this.#reducers[event.id] = this.#createReducer(
-          this,
-          event.init,
-          (state) => {
-            this.dispatchEvent(new StateEvent(event.id, state));
-          },
-        );
+        this.#reducers[event.id] = this.createReducer(event.init, (state) => {
+          setTimeout(() => this.dispatchEvent(new StateEvent(event.id, state)));
+        });
       },
       { signal },
     );
@@ -150,6 +140,11 @@ export class StateEngine<
       { signal },
     );
   }
+
+  protected abstract createReducer(
+    init: ReducerInit,
+    callback: (state: State) => void,
+  ): StateReducer<State, ReducerInit, Action>;
 
   stop(): void {
     this.#controller.abort();

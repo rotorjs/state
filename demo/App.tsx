@@ -1,48 +1,56 @@
-import {
-  RegisterReducerEvent,
-  RemoveReducerEvent,
-  wrapMessageEventTarget,
-} from '@/main';
-import { useEffect, useId } from 'react';
+import { RegisterReducerEvent, RemoveReducerEvent, wrapWorker } from '@/main';
+import { useEffect } from 'react';
 import './App.css';
+import { type DemoStateEventTarget } from './DemoStateEngine';
+// eslint-disable-next-line import-x/default
 import Worker from './worker?worker';
-import type { DemoStateEventTarget } from './DemoStateEngine';
 
 const worker = new Worker();
-const engine: DemoStateEventTarget = wrapMessageEventTarget(worker);
-// const engine = new DemoStateEngine(createDemoStateReducer);
+const engine: DemoStateEventTarget = wrapWorker(worker);
+// const engine = new DemoStateEngine();
 
-engine.addEventListener('context', (event) => {
-  alert('context ' + event.update);
+engine.addEventListener('register-reducer', (event) => {
+  console.log('main: register reducer', event.id, event.emitter);
+});
+
+engine.addEventListener('remove-reducer', (event) => {
+  console.log('main: remove reducer', event.id, event.emitter);
+});
+
+engine.addEventListener('action', (event) => {
+  console.log('main: action', event.action, event.emitter);
 });
 
 engine.addEventListener('interest', (event) => {
-  alert('interest ' + event.interest);
+  console.log('main: interest', event.interest, event.emitter);
 });
 
 engine.addEventListener('state', (event) => {
-  alert('state ' + event.id + ' ' + event.state);
+  console.log('main: state', event.id, event.state, event.emitter);
 });
 
-export default function App() {
-  const id = useId();
-  const id2 = useId();
+let nextId = 0;
 
+export default function App() {
   useEffect(() => {
+    const id = (nextId++).toFixed();
+
     engine.dispatchEvent(new RegisterReducerEvent(id, { other: false }));
 
     return () => {
       engine.dispatchEvent(new RemoveReducerEvent(id));
     };
-  }, [id]);
+  }, []);
 
   useEffect(() => {
-    engine.dispatchEvent(new RegisterReducerEvent(id2, { other: true }));
+    const id = (nextId++).toFixed();
+
+    engine.dispatchEvent(new RegisterReducerEvent(id, { other: true }));
 
     return () => {
-      engine.dispatchEvent(new RemoveReducerEvent(id2));
+      engine.dispatchEvent(new RemoveReducerEvent(id));
     };
-  }, [id2]);
+  }, []);
 
   return 'Demo';
 }

@@ -1,4 +1,4 @@
-import type { ContextEvent } from './ContextEvent';
+import type { ActionEvent } from './ActionEvent';
 import type { InterestEvent } from './InterestEvent';
 import type { RegisterReducerEvent } from './RegisterReducerEvent';
 import type { RemoveReducerEvent } from './RemoveReducerEvent';
@@ -8,9 +8,9 @@ import { TypedEventTarget } from './TypedEventTarget';
 export class StateEventTarget<
   State,
   ReducerInit,
-  ContextUpdate,
+  Action,
 > extends TypedEventTarget<{
-  context: ContextEvent<ContextUpdate>;
+  action: ActionEvent<Action>;
   interest: InterestEvent;
   'register-reducer': RegisterReducerEvent<ReducerInit>;
   'remove-reducer': RemoveReducerEvent;
