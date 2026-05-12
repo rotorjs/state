@@ -23,13 +23,13 @@ export function attachStateEventTarget<T>(
   postMessage: (message: unknown, transfer?: Transferable[]) => void,
   options?: AttachStateEventTargetOptions,
 ): void {
-  const id = uuid();
+  const emitterID = uuid();
   const signal = options?.signal;
 
   target.addEventListener(
     'action',
     (event) => {
-      if (event.emitter === id) return;
+      if (event.emitter === emitterID) return;
       postMessage({
         type: 'action',
         action: event.action,
@@ -41,7 +41,7 @@ export function attachStateEventTarget<T>(
   target.addEventListener(
     'interest',
     (event) => {
-      if (event.emitter === id) return;
+      if (event.emitter === emitterID) return;
       postMessage({
         type: 'interest',
         interest: event.interest,
@@ -53,7 +53,7 @@ export function attachStateEventTarget<T>(
   target.addEventListener(
     'register-reducer',
     (event) => {
-      if (event.emitter === id) return;
+      if (event.emitter === emitterID) return;
       postMessage({
         type: 'register-reducer',
         id: event.id,
@@ -66,7 +66,7 @@ export function attachStateEventTarget<T>(
   target.addEventListener(
     'remove-reducer',
     (event) => {
-      if (event.emitter === id) return;
+      if (event.emitter === emitterID) return;
       postMessage({
         type: 'remove-reducer',
         id: event.id,
@@ -78,7 +78,7 @@ export function attachStateEventTarget<T>(
   target.addEventListener(
     'state',
     (event) => {
-      if (event.emitter === id) return;
+      if (event.emitter === emitterID) return;
       postMessage({
         type: 'state',
         id: event.id,
@@ -96,35 +96,35 @@ export function attachStateEventTarget<T>(
       switch (message.type) {
         case 'action': {
           const e = new ActionEvent(message.action);
-          e.emitter = id;
+          e.emitter = emitterID;
           target.dispatchEvent(e);
           return;
         }
 
         case 'interest': {
           const e = new InterestEvent(message.interest);
-          e.emitter = id;
+          e.emitter = emitterID;
           target.dispatchEvent(e);
           return;
         }
 
         case 'register-reducer': {
           const e = new RegisterReducerEvent(message.id, message.init);
-          e.emitter = id;
+          e.emitter = emitterID;
           target.dispatchEvent(e);
           return;
         }
 
         case 'remove-reducer': {
           const e = new RemoveReducerEvent(message.id);
-          e.emitter = id;
+          e.emitter = emitterID;
           target.dispatchEvent(e);
           return;
         }
 
         case 'state': {
           const e = new StateEvent(message.id, message.state);
-          e.emitter = id;
+          e.emitter = emitterID;
           target.dispatchEvent(e);
           return;
         }

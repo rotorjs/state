@@ -53,13 +53,11 @@ export abstract class StateReducer<
   }
 
   get signal() {
-    return this.#controller.signal;
+    return AbortSignal.any([this.#controller.signal, this.engine.signal]);
   }
 
   addInterest(interest: string): void {
-    if (!Object.hasOwn(this.#interests, interest)) {
-      this.#interests[interest] = true;
-    }
+    this.#interests[interest] = true;
   }
 
   removeInterest(interest: string): void {
@@ -79,16 +77,13 @@ export abstract class StateReducer<
 
     this.#pending = true;
 
-    if (this.#debounce && this.#debounce > 0) {
-      this.#queue = this.#queue.then<State>(
-        (state) =>
-          new Promise((resolve) => {
-            setTimeout(() => resolve(state), this.#debounce);
-          }),
-      );
-    }
-
     this.#queue = this.#queue.then<State>(async (prevState) => {
+      await new Promise((resolve) => {
+        // The timeout is needed to allow other events to be processed between updates.
+        // Also, we can set an optional debounce here to reduce unnecessary redundant updates.
+        setTimeout(resolve, this.#debounce);
+      });
+
       this.#pending = false;
 
       if (this.signal.aborted) return prevState;
@@ -142,7 +137,9 @@ export abstract class StateEngine<
         }
 
         this.#reducers[event.id] = this.createReducer(event.init, (state) => {
-          setTimeout(() => this.dispatchState(event.id, state));
+          setTimeout(() => {
+            this.dispatchState(event.id, state);
+          });
         });
       },
       { signal },
