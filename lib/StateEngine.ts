@@ -1,4 +1,3 @@
-import { StateEvent } from './StateEvent';
 import { StateEventTarget } from './StateEventTarget';
 
 export abstract class StateReducer<
@@ -27,7 +26,7 @@ export abstract class StateReducer<
     this.#queue = Promise.resolve(initialState);
     this.#callback = callback;
 
-    const signal = this.#controller.signal;
+    const signal = this.signal;
 
     this.#engine.addEventListener(
       'interest',
@@ -44,6 +43,10 @@ export abstract class StateReducer<
 
   get engine() {
     return this.#engine;
+  }
+
+  get signal() {
+    return this.#controller.signal;
   }
 
   addInterest(interest: string): void {
@@ -72,7 +75,7 @@ export abstract class StateReducer<
     this.#queue = this.#queue.then(async (prevState): Promise<State> => {
       this.#pending = false;
 
-      if (this.#controller.signal.aborted) return prevState;
+      if (this.signal.aborted) return prevState;
 
       let nextState: State;
       try {
@@ -81,7 +84,7 @@ export abstract class StateReducer<
         nextState = this.recover(prevState, error);
       }
 
-      if (this.#controller.signal.aborted) return prevState;
+      if (this.signal.aborted) return prevState;
 
       if (nextState !== prevState) {
         this.#callback(nextState);
@@ -113,7 +116,7 @@ export abstract class StateEngine<
   constructor() {
     super();
 
-    const signal = this.#controller.signal;
+    const signal = this.signal;
 
     this.addEventListener(
       'register-reducer',
@@ -123,7 +126,7 @@ export abstract class StateEngine<
         }
 
         this.#reducers[event.id] = this.createReducer(event.init, (state) => {
-          setTimeout(() => this.dispatchEvent(new StateEvent(event.id, state)));
+          setTimeout(() => this.dispatchState(event.id, state));
         });
       },
       { signal },
@@ -139,6 +142,10 @@ export abstract class StateEngine<
       },
       { signal },
     );
+  }
+
+  get signal() {
+    return this.#controller.signal;
   }
 
   protected abstract createReducer(

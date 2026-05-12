@@ -1,4 +1,4 @@
-import { RegisterReducerEvent, RemoveReducerEvent, wrapWorker } from '@/main';
+import { wrapWorker } from '@/main';
 import { useEffect } from 'react';
 import './App.css';
 import { type DemoStateEventTarget } from './DemoStateEngine';
@@ -35,20 +35,20 @@ export default function App() {
   useEffect(() => {
     const id = (nextId++).toFixed();
 
-    engine.dispatchEvent(new RegisterReducerEvent(id, { other: false }));
+    engine.registerReducer(id, { other: false });
 
     return () => {
-      engine.dispatchEvent(new RemoveReducerEvent(id));
+      engine.removeReducer(id);
     };
   }, []);
 
   useEffect(() => {
     const id = (nextId++).toFixed();
 
-    engine.dispatchEvent(new RegisterReducerEvent(id, { other: true }));
+    engine.registerReducer(id, { other: true });
 
     return () => {
-      engine.dispatchEvent(new RemoveReducerEvent(id));
+      engine.removeReducer(id);
     };
   }, []);
 
