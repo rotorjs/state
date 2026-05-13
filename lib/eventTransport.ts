@@ -33,7 +33,8 @@ type EventMessage =
       type: 'state';
       id: string;
       state: unknown;
-    };
+    }
+  | { rotorEventTarget?: unknown; type: never };
 
 export type AttachStateEventTargetOptions = {
   signal?: AbortSignal;
