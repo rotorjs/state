@@ -105,7 +105,7 @@ export abstract class StateReducer<
     });
   }
 
-  abstract reduce(prevState: State): Promise<State>;
+  abstract reduce(prevState: State): State | Promise<State>;
 
   abstract recover(prevState: State, error: unknown): State;
 
