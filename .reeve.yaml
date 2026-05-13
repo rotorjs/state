@@ -7,8 +7,8 @@ when:
     include: [soldier]
   trigger:
     include: [tag, action]
-    action:
-      include: [packages:@rotorjs/core:publish]
+  action:
+    include: [packages:@rotorjs/core:publish]
 
 steps:
   - name: publish
