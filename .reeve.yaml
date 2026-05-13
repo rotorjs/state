@@ -1,0 +1,19 @@
+---
+type: pipeline
+name: publish @rotorjs/core
+
+when:
+  workerGroup:
+    include: [soldier]
+  trigger:
+    include: [tag, action]
+    action:
+      include: [packages:@rotorjs/core:publish]
+
+steps:
+  - name: publish
+    task: '@reeve/npm-publish'
+    params:
+      NPM_LOGIN_REGISTRY: https://registry.npmjs.org
+      NPM_LOGIN_TOKEN: { env: npm/registry.npmjs.org/token }
+      ACCESS: public
