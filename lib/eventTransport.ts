@@ -6,15 +6,37 @@ import { RemoveReducerEvent } from './RemoveReducerEvent';
 import { StateEvent } from './StateEvent';
 import { StateEventTarget } from './StateEventTarget';
 
-type StateMessage =
-  | { type: 'action'; action: unknown }
-  | { type: 'interest'; interest: string }
-  | { type: 'register-reducer'; id: string; init: unknown }
-  | { type: 'remove-reducer'; id: string }
-  | { type: 'state'; id: string; state: unknown };
+type ActionEventMessage = { type: `${string}:action`; action: unknown };
+
+type InterestEventMessage = { type: `${string}:interest`; interest: string };
+
+type RegisterReducerEventMessage = {
+  type: `${string}:register-reducer`;
+  id: string;
+  init: unknown;
+};
+
+type RemoveReducerEventMessage = {
+  type: `${string}:remove-reducer`;
+  id: string;
+};
+
+type StateEventMessage = {
+  type: `${string}:state`;
+  id: string;
+  state: unknown;
+};
+
+type EventMessage =
+  | ActionEventMessage
+  | InterestEventMessage
+  | RegisterReducerEventMessage
+  | RemoveReducerEventMessage
+  | StateEventMessage;
 
 export type AttachStateEventTargetOptions = {
   signal?: AbortSignal;
+  messagePrefix?: string;
 };
 
 export function attachStateEventTarget<T>(
@@ -25,15 +47,16 @@ export function attachStateEventTarget<T>(
 ): void {
   const emitterID = uuid();
   const signal = options?.signal;
+  const messagePrefix = options?.messagePrefix ?? 'rotorjs:';
 
   target.addEventListener(
     'action',
     (event) => {
       if (event.emitter === emitterID) return;
       postMessage({
-        type: 'action',
+        type: `${messagePrefix}:action`,
         action: event.action,
-      } satisfies StateMessage);
+      } satisfies EventMessage);
     },
     { signal },
   );
@@ -43,9 +66,9 @@ export function attachStateEventTarget<T>(
     (event) => {
       if (event.emitter === emitterID) return;
       postMessage({
-        type: 'interest',
+        type: `${messagePrefix}:interest`,
         interest: event.interest,
-      } satisfies StateMessage);
+      } satisfies EventMessage);
     },
     { signal },
   );
@@ -55,10 +78,10 @@ export function attachStateEventTarget<T>(
     (event) => {
       if (event.emitter === emitterID) return;
       postMessage({
-        type: 'register-reducer',
+        type: `${messagePrefix}:register-reducer`,
         id: event.id,
         init: event.init,
-      } satisfies StateMessage);
+      } satisfies EventMessage);
     },
     { signal },
   );
@@ -68,9 +91,9 @@ export function attachStateEventTarget<T>(
     (event) => {
       if (event.emitter === emitterID) return;
       postMessage({
-        type: 'remove-reducer',
+        type: `${messagePrefix}:remove-reducer`,
         id: event.id,
-      } satisfies StateMessage);
+      } satisfies EventMessage);
     },
     { signal },
   );
@@ -80,10 +103,10 @@ export function attachStateEventTarget<T>(
     (event) => {
       if (event.emitter === emitterID) return;
       postMessage({
-        type: 'state',
+        type: `${messagePrefix}:state`,
         id: event.id,
         state: event.state,
-      } satisfies StateMessage);
+      } satisfies EventMessage);
     },
     { signal },
   );
@@ -91,39 +114,44 @@ export function attachStateEventTarget<T>(
   addEventListener(
     'message',
     (event) => {
-      const message: StateMessage = event.data;
+      const message: EventMessage = event.data;
 
       switch (message.type) {
-        case 'action': {
-          const e = new ActionEvent(message.action);
+        case `${messagePrefix}:action`: {
+          const m = message as ActionEventMessage;
+          const e = new ActionEvent(m.action);
           e.emitter = emitterID;
           target.dispatchEvent(e);
           return;
         }
 
-        case 'interest': {
-          const e = new InterestEvent(message.interest);
+        case `${messagePrefix}:interest`: {
+          const m = message as InterestEventMessage;
+          const e = new InterestEvent(m.interest);
           e.emitter = emitterID;
           target.dispatchEvent(e);
           return;
         }
 
-        case 'register-reducer': {
-          const e = new RegisterReducerEvent(message.id, message.init);
+        case `${messagePrefix}:register-reducer`: {
+          const m = message as RegisterReducerEventMessage;
+          const e = new RegisterReducerEvent(m.id, m.init);
           e.emitter = emitterID;
           target.dispatchEvent(e);
           return;
         }
 
-        case 'remove-reducer': {
-          const e = new RemoveReducerEvent(message.id);
+        case `${messagePrefix}:remove-reducer`: {
+          const m = message as RemoveReducerEventMessage;
+          const e = new RemoveReducerEvent(m.id);
           e.emitter = emitterID;
           target.dispatchEvent(e);
           return;
         }
 
-        case 'state': {
-          const e = new StateEvent(message.id, message.state);
+        case `${messagePrefix}:state`: {
+          const m = message as StateEventMessage;
+          const e = new StateEvent(m.id, m.state);
           e.emitter = emitterID;
           target.dispatchEvent(e);
           return;
