@@ -1,6 +1,7 @@
 import react from '@vitejs/plugin-react';
 import dts from 'unplugin-dts/vite';
 import { defineConfig } from 'vite';
+import { devDependencies } from './package.json';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -15,7 +16,7 @@ export default defineConfig({
     },
     copyPublicDir: false,
     rollupOptions: {
-      external: ['react', 'react-dom', 'react/jsx-runtime'],
+      external: [...Object.keys(devDependencies ?? {}), 'react/jsx-runtime'],
       output: {
         globals: {
           react: 'React',
