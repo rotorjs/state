@@ -1,4 +1,4 @@
-import { wrapWorker } from '@/main';
+import { StateConsumer, wrapWorker } from '@/main';
 import { useEffect } from 'react';
 import './App.css';
 import { type DemoStateEventTarget } from './DemoStateEngine';
@@ -12,14 +12,6 @@ const worker = new Worker();
 const engine: DemoStateEventTarget = wrapWorker(worker, { signal });
 // const engine = new DemoStateEngine();
 
-engine.addEventListener('register-reducer', (event) => {
-  console.log('main: register reducer', event.id, event.emitter);
-});
-
-engine.addEventListener('remove-reducer', (event) => {
-  console.log('main: remove reducer', event.id, event.emitter);
-});
-
 engine.addEventListener('action', (event) => {
   console.log('main: action', event.action, event.emitter);
 
@@ -30,32 +22,48 @@ engine.addEventListener('interest', (event) => {
   console.log('main: interest', event.interest, event.emitter);
 });
 
+engine.addEventListener('subscribe-state', (event) => {
+  console.log(
+    'main: subscribe state',
+    event.consumer,
+    event.descriptor,
+    event.emitter,
+  );
+});
+
+engine.addEventListener('unsubscribe-state', (event) => {
+  console.log(
+    'main: unsubscribe state',
+    event.consumer,
+    event.descriptor,
+    event.emitter,
+  );
+});
+
 engine.addEventListener('state', (event) => {
-  console.log('main: state', event.id, event.state, event.emitter);
+  console.log('main: state', event.consumers, event.state, event.emitter);
 });
 
 (window as typeof window & { engine: DemoStateEventTarget }).engine = engine;
 
-let nextId = 0;
-
 export default function App() {
   useEffect(() => {
-    const id = (nextId++).toFixed();
-
-    engine.registerReducer(id, { other: false });
+    const consumer = new StateConsumer(engine, { other: false }, (state) => {
+      console.log(`Consumer ${consumer.id} got state:`, state);
+    });
 
     return () => {
-      engine.removeReducer(id);
+      consumer.stop();
     };
   }, []);
 
   useEffect(() => {
-    const id = (nextId++).toFixed();
-
-    engine.registerReducer(id, { other: true });
+    const consumer = new StateConsumer(engine, { other: true }, (state) => {
+      console.log(`Consumer ${consumer.id} got state:`, state);
+    });
 
     return () => {
-      engine.removeReducer(id);
+      consumer.stop();
     };
   }, []);
 

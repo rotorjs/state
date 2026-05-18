@@ -1,24 +1,23 @@
 import { StateEngine, StateReducer, type StateEventTarget } from '@/main';
 
+export type DemoStateDescriptor = { other: boolean };
+
 export type DemoState =
   | 'demo state'
-  | 'updated demo state'
   | 'other demo state'
-  | 'extended demo state';
-
-export type DemoReducerInit = { other: boolean };
+  | `extended demo state ${string}`;
 
 export type DemoAction = 'demo action' | 'stop';
 
 export type DemoStateEventTarget = StateEventTarget<
+  DemoStateDescriptor,
   DemoState,
-  DemoReducerInit,
   DemoAction
 >;
 
 export class DemoStateReducer extends StateReducer<
+  DemoStateDescriptor,
   DemoState,
-  DemoReducerInit,
   DemoAction,
   DemoStateEngine
 > {
@@ -29,14 +28,14 @@ export class DemoStateReducer extends StateReducer<
     other: boolean,
     callback: (state: DemoState) => void,
   ) {
-    super(engine, 'demo state', callback);
+    super(engine, callback);
 
     this.#other = other;
 
     this.update();
   }
 
-  async reduce(_prevState: DemoState): Promise<DemoState> {
+  async reduce(): Promise<DemoState> {
     console.log('reduce');
 
     this.clearInterests();
@@ -54,8 +53,8 @@ export class DemoStateReducer extends StateReducer<
 }
 
 export class DemoStateEngine extends StateEngine<
+  DemoStateDescriptor,
   DemoState,
-  DemoReducerInit,
   DemoAction
 > {
   constructor() {
@@ -75,20 +74,27 @@ export class DemoStateEngine extends StateEngine<
   }
 
   getState(other: boolean): DemoState {
-    return other ? 'other demo state' : 'updated demo state';
+    return other ? 'other demo state' : 'demo state';
+  }
+
+  protected getReducerID(descriptor: DemoStateDescriptor): string {
+    return descriptor.other ? 'other reducer' : 'reducer';
   }
 
   protected createReducer(
-    init: DemoReducerInit,
+    descriptor: DemoStateDescriptor,
     callback: (state: DemoState) => void,
-  ): StateReducer<DemoState, DemoReducerInit, 'demo action' | 'stop'> {
-    return new DemoStateReducer(this, init.other, callback);
+  ): StateReducer<DemoStateDescriptor, DemoState, 'demo action' | 'stop'> {
+    console.log('creating reducer:', this.getReducerID(descriptor));
+    return new DemoStateReducer(this, descriptor.other, callback);
   }
 }
 
 export class ExtendedDemoStateEngine extends DemoStateEngine {
+  #n = 0;
+
   getState(other: boolean): DemoState {
     if (other) return super.getState(other);
-    return 'extended demo state';
+    return `extended demo state ${this.#n++}`;
   }
 }

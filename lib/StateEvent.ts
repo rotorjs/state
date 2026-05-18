@@ -1,18 +1,18 @@
 import { EmitterEvent } from './EmitterEvent';
 
 export class StateEvent<State> extends EmitterEvent {
-  #id;
+  #consumers;
   #state;
 
-  constructor(id: string, state: State) {
+  constructor(consumers: string[], state: State) {
     super('state');
 
-    this.#id = id;
+    this.#consumers = consumers;
     this.#state = state;
   }
 
-  get id() {
-    return this.#id;
+  get consumers() {
+    return this.#consumers;
   }
 
   get state() {

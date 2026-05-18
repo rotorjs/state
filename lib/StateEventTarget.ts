@@ -1,19 +1,19 @@
 import { ActionEvent } from './ActionEvent';
 import { InterestEvent } from './InterestEvent';
-import { RegisterReducerEvent } from './RegisterReducerEvent';
-import { RemoveReducerEvent } from './RemoveReducerEvent';
 import { StateEvent } from './StateEvent';
+import { SubscribeStateEvent } from './SubscribeStateEvent';
 import { TypedEventTarget } from './TypedEventTarget';
+import { UnsubscribeStateEvent } from './UnsubscribeStateEvent';
 
 export class StateEventTarget<
+  StateDescriptor,
   State,
-  ReducerInit,
   Action,
 > extends TypedEventTarget<{
   action: ActionEvent<Action>;
   interest: InterestEvent;
-  'register-reducer': RegisterReducerEvent<ReducerInit>;
-  'remove-reducer': RemoveReducerEvent;
+  'subscribe-state': SubscribeStateEvent<StateDescriptor>;
+  'unsubscribe-state': UnsubscribeStateEvent<StateDescriptor>;
   state: StateEvent<State>;
 }> {
   dispatchAction(action: Action): void {
@@ -24,15 +24,15 @@ export class StateEventTarget<
     this.dispatchEvent(new InterestEvent(interest));
   }
 
-  registerReducer(id: string, init: ReducerInit): void {
-    this.dispatchEvent(new RegisterReducerEvent(id, init));
+  subscribeState(consumer: string, descriptor: StateDescriptor): void {
+    this.dispatchEvent(new SubscribeStateEvent(consumer, descriptor));
   }
 
-  removeReducer(id: string): void {
-    this.dispatchEvent(new RemoveReducerEvent(id));
+  unsubscribeState(consumer: string, descriptor: StateDescriptor): void {
+    this.dispatchEvent(new UnsubscribeStateEvent(consumer, descriptor));
   }
 
-  dispatchState(id: string, state: State): void {
-    this.dispatchEvent(new StateEvent(id, state));
+  dispatchState(consumers: string[], state: State): void {
+    this.dispatchEvent(new StateEvent(consumers, state));
   }
 }

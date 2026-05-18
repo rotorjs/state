@@ -1,10 +1,10 @@
 import { v7 as uuid } from 'uuid';
 import { ActionEvent } from './ActionEvent';
 import { InterestEvent } from './InterestEvent';
-import { RegisterReducerEvent } from './RegisterReducerEvent';
-import { RemoveReducerEvent } from './RemoveReducerEvent';
 import { StateEvent } from './StateEvent';
 import { StateEventTarget } from './StateEventTarget';
+import { SubscribeStateEvent } from './SubscribeStateEvent';
+import { UnsubscribeStateEvent } from './UnsubscribeStateEvent';
 
 type EventMessage =
   | {
@@ -19,19 +19,20 @@ type EventMessage =
     }
   | {
       rotorEventTarget: string;
-      type: 'register-reducer';
-      id: string;
-      init: unknown;
+      type: 'subscribe-state';
+      consumer: string;
+      descriptor: unknown;
     }
   | {
       rotorEventTarget: string;
-      type: 'remove-reducer';
-      id: string;
+      type: 'unsubscribe-state';
+      consumer: string;
+      descriptor: unknown;
     }
   | {
       rotorEventTarget: string;
       type: 'state';
-      id: string;
+      consumers: string[];
       state: unknown;
     }
   | { rotorEventTarget?: unknown; type: never };
@@ -78,27 +79,28 @@ export function attachStateEventTarget<T>(
   );
 
   target.addEventListener(
-    'register-reducer',
+    'subscribe-state',
     (event) => {
       if (event.emitter === emitterID) return;
       postMessage({
         rotorEventTarget,
-        type: 'register-reducer',
-        id: event.id,
-        init: event.init,
+        type: 'subscribe-state',
+        consumer: event.consumer,
+        descriptor: event.descriptor,
       } satisfies EventMessage);
     },
     { signal },
   );
 
   target.addEventListener(
-    'remove-reducer',
+    'unsubscribe-state',
     (event) => {
       if (event.emitter === emitterID) return;
       postMessage({
         rotorEventTarget,
-        type: 'remove-reducer',
-        id: event.id,
+        type: 'unsubscribe-state',
+        consumer: event.consumer,
+        descriptor: event.descriptor,
       } satisfies EventMessage);
     },
     { signal },
@@ -111,7 +113,7 @@ export function attachStateEventTarget<T>(
       postMessage({
         rotorEventTarget,
         type: 'state',
-        id: event.id,
+        consumers: event.consumers,
         state: event.state,
       } satisfies EventMessage);
     },
@@ -139,22 +141,28 @@ export function attachStateEventTarget<T>(
           return;
         }
 
-        case 'register-reducer': {
-          const e = new RegisterReducerEvent(message.id, message.init);
+        case 'subscribe-state': {
+          const e = new SubscribeStateEvent(
+            message.consumer,
+            message.descriptor,
+          );
           e.emitter = emitterID;
           target.dispatchEvent(e);
           return;
         }
 
-        case 'remove-reducer': {
-          const e = new RemoveReducerEvent(message.id);
+        case 'unsubscribe-state': {
+          const e = new UnsubscribeStateEvent(
+            message.consumer,
+            message.descriptor,
+          );
           e.emitter = emitterID;
           target.dispatchEvent(e);
           return;
         }
 
         case 'state': {
-          const e = new StateEvent(message.id, message.state);
+          const e = new StateEvent(message.consumers, message.state);
           e.emitter = emitterID;
           target.dispatchEvent(e);
           return;
@@ -182,11 +190,11 @@ export function attachWorker<T>(
   );
 }
 
-export function wrapWorker<State, ReducerInit, Action, T>(
+export function wrapWorker<StateDescriptor, State, Action, T>(
   worker: WorkerLike<T>,
   options?: AttachStateEventTargetOptions,
-): StateEventTarget<State, ReducerInit, Action> {
-  const target = new StateEventTarget<State, ReducerInit, Action>();
+): StateEventTarget<StateDescriptor, State, Action> {
+  const target = new StateEventTarget<StateDescriptor, State, Action>();
   attachWorker(target, worker, options);
   return target;
 }
