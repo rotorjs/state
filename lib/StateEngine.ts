@@ -1,75 +1,99 @@
+import type { StateCallback } from './StateCallback';
 import { StateEventTarget } from './StateEventTarget';
 
-export type StateReducerOptions = {
-  debounce?: number;
-};
-
 export abstract class StateReducer<
+  StateDescriptor,
   State,
-  ReducerInit,
   Action,
-  Engine extends StateEngine<State, ReducerInit, Action> = StateEngine<
+  Engine extends StateEngine<StateDescriptor, State, Action> = StateEngine<
+    StateDescriptor,
     State,
-    ReducerInit,
     Action
   >,
 > {
   #engine;
-  #queue: Promise<State>;
   #callback;
+  #consumers: { [id: string]: boolean } = {};
   #interests: { [interest: string]: boolean } = {};
+  #hasState = false;
+  #state: State | undefined;
+  #debounce = 0;
   #pending = false;
-  #debounce;
+  #queue: Promise<void> = Promise.resolve();
   #controller = new AbortController();
 
-  constructor(
-    engine: Engine,
-    initialState: State,
-    callback: (state: State) => void,
-    options?: StateReducerOptions,
-  ) {
+  constructor(engine: Engine, callback: StateCallback<State>) {
     this.#engine = engine;
-    this.#queue = Promise.resolve(initialState);
     this.#callback = callback;
-    this.#debounce = options?.debounce;
 
     const signal = this.signal;
 
-    this.#engine.addEventListener(
+    this.engine.addEventListener(
       'interest',
       (event) => {
-        if (Object.hasOwn(this.#interests, event.interest)) {
-          this.update();
-        }
+        if (this.hasInterest(event.interest)) this.update();
       },
       { signal },
     );
-
-    this.#callback(initialState);
   }
 
-  get engine() {
+  get engine(): Engine {
     return this.#engine;
   }
 
-  get signal() {
+  get debounce(): number {
+    return this.#debounce;
+  }
+
+  get signal(): AbortSignal {
     return AbortSignal.any([this.#controller.signal, this.engine.signal]);
+  }
+
+  addConsumer(consumer: string): void {
+    this.#consumers[consumer] = true;
+
+    if (!this.signal.aborted && this.#hasState)
+      this.engine.dispatchState([consumer], this.#state!);
+  }
+
+  hasConsumer(consumer: string): boolean {
+    return Object.hasOwn(this.#consumers, consumer);
+  }
+
+  getConsumers(): string[] {
+    return Object.keys(this.#consumers);
+  }
+
+  removeConsumer(consumer: string): boolean {
+    return delete this.#consumers[consumer];
+  }
+
+  clearConsumers(): void {
+    this.#consumers = {};
   }
 
   addInterest(interest: string): void {
     this.#interests[interest] = true;
   }
 
-  removeInterest(interest: string): void {
-    delete this.#interests[interest];
+  hasInterest(interest: string): boolean {
+    return Object.hasOwn(this.#interests, interest);
   }
 
   getInterests(): string[] {
     return Object.keys(this.#interests);
   }
 
+  removeInterest(interest: string): boolean {
+    return delete this.#interests[interest];
+  }
+
   clearInterests(): void {
     this.#interests = {};
+  }
+
+  setDebounce(debounce: number): void {
+    this.#debounce = debounce;
   }
 
   update(): void {
@@ -77,7 +101,7 @@ export abstract class StateReducer<
 
     this.#pending = true;
 
-    this.#queue = this.#queue.then<State>(async (prevState) => {
+    this.#queue = this.#queue.then<void>(async () => {
       await new Promise((resolve) => {
         // The timeout is needed to allow other events to be processed between updates.
         // Also, we can set an optional debounce here to reduce unnecessary redundant updates.
@@ -86,28 +110,38 @@ export abstract class StateReducer<
 
       this.#pending = false;
 
-      if (this.signal.aborted) return prevState;
+      if (this.signal.aborted) return;
 
       let nextState: State;
       try {
-        nextState = await this.reduce(prevState);
+        nextState = await this.reduce(this.#state);
       } catch (error) {
-        nextState = this.recover(prevState, error);
+        nextState = this.recover(this.#state, error);
       }
 
-      if (this.signal.aborted) return prevState;
+      if (
+        this.signal.aborted ||
+        (this.#hasState && this.compareStates(nextState, this.#state!))
+      )
+        return;
 
-      if (nextState !== prevState) {
-        this.#callback(nextState);
-      }
-
-      return nextState;
+      this.#hasState = true;
+      this.#state = nextState;
+      this.onState(nextState);
     });
   }
 
-  abstract reduce(prevState: State): State | Promise<State>;
+  abstract reduce(prevState: State | undefined): State | Promise<State>;
 
-  abstract recover(prevState: State, error: unknown): State;
+  abstract recover(prevState: State | undefined, error: unknown): State;
+
+  protected compareStates(nextState: State, prevState: State): boolean {
+    return nextState === prevState;
+  }
+
+  protected onState(state: State): void {
+    this.#callback(state);
+  }
 
   stop(): void {
     this.#controller.abort();
@@ -115,12 +149,12 @@ export abstract class StateReducer<
 }
 
 export abstract class StateEngine<
+  StateDescriptor,
   State,
-  ReducerInit,
   Action,
-> extends StateEventTarget<State, ReducerInit, Action> {
+> extends StateEventTarget<StateDescriptor, State, Action> {
   #reducers: {
-    [id: string]: StateReducer<State, ReducerInit, Action>;
+    [id: string]: StateReducer<StateDescriptor, State, Action>;
   } = {};
   #controller = new AbortController();
 
@@ -130,41 +164,69 @@ export abstract class StateEngine<
     const signal = this.signal;
 
     this.addEventListener(
-      'register-reducer',
+      'action',
       (event) => {
-        if (Object.hasOwn(this.#reducers, event.id)) {
-          this.#reducers[event.id].stop();
-        }
-
-        this.#reducers[event.id] = this.createReducer(event.init, (state) => {
-          setTimeout(() => {
-            this.dispatchState(event.id, state);
-          });
-        });
+        this.onAction(event.action);
       },
       { signal },
     );
 
     this.addEventListener(
-      'remove-reducer',
+      'subscribe-state',
       (event) => {
-        if (Object.hasOwn(this.#reducers, event.id)) {
-          this.#reducers[event.id].stop();
-          delete this.#reducers[event.id];
+        const id = this.getReducerID(event.descriptor);
+
+        if (!Object.hasOwn(this.#reducers, id)) {
+          const reducer = this.createReducer(event.descriptor, (state) => {
+            setTimeout(() => {
+              this.dispatchState(reducer.getConsumers(), state);
+            });
+          });
+          this.#reducers[id] = reducer;
+        }
+
+        this.#reducers[id].addConsumer(event.consumer);
+      },
+      { signal },
+    );
+
+    this.addEventListener(
+      'unsubscribe-state',
+      (event) => {
+        const id = this.getReducerID(event.descriptor);
+
+        if (!Object.hasOwn(this.#reducers, id)) return;
+
+        const reducer = this.#reducers[id];
+
+        if (!reducer.removeConsumer(event.consumer)) return;
+
+        if (!reducer.getConsumers().length) {
+          setTimeout(() => {
+            if (reducer.getConsumers().length || this.#reducers[id] !== reducer)
+              return;
+
+            delete this.#reducers[id];
+            reducer.stop();
+          });
         }
       },
       { signal },
     );
   }
 
-  get signal() {
+  get signal(): AbortSignal {
     return this.#controller.signal;
   }
 
+  protected abstract getReducerID(descriptor: StateDescriptor): string;
+
   protected abstract createReducer(
-    init: ReducerInit,
-    callback: (state: State) => void,
-  ): StateReducer<State, ReducerInit, Action>;
+    descriptor: StateDescriptor,
+    callback: StateCallback<State>,
+  ): StateReducer<StateDescriptor, State, Action>;
+
+  protected onAction(_action: Action): void {}
 
   stop(): void {
     this.#controller.abort();
