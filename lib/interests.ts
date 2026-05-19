@@ -1,7 +1,7 @@
-export function stateCleanupInterest(reducerID: string) {
-  return `state://state/${encodeURIComponent(reducerID)}/cleanup`;
+export function stateInterest(reducerID: string) {
+  return `state://reducer/${encodeURIComponent(reducerID)}/state`;
 }
 
-export function stateChangeInterest(reducerID: string) {
-  return `state://state/${encodeURIComponent(reducerID)}/change`;
+export function stateReducerCleanupInterest(reducerID: string) {
+  return `state://reducer/${encodeURIComponent(reducerID)}/cleanup`;
 }
