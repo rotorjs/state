@@ -33,7 +33,7 @@ export class StateConsumer<
       (event) => {
         if (
           !event.consumers.includes(this.id) ||
-          (this.#hasState && this.compareStates(event.state, this.#state!))
+          (this.#hasState && this.compareStates(event.state, this.state!))
         )
           return;
 
@@ -57,6 +57,10 @@ export class StateConsumer<
 
   get descriptor(): StateDescriptor {
     return this.#descriptor;
+  }
+
+  get state(): State | undefined {
+    return this.#state;
   }
 
   get signal(): AbortSignal {
