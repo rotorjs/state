@@ -1,4 +1,4 @@
-import { stateInterest } from './interests';
+import { stateChangeInterest, stateCleanupInterest } from './interests';
 import type { StateEngine } from './StateEngine';
 
 export abstract class StateReducer<
@@ -133,6 +133,8 @@ export abstract class StateReducer<
           nextState = this.recover(this.#state, error);
         }
 
+        this.engine.dispatchInterest(stateCleanupInterest(this.id));
+
         if (
           this.signal.aborted ||
           (this.#hasState && this.compareStates(nextState, this.#state!))
@@ -160,7 +162,7 @@ export abstract class StateReducer<
   protected onState(state: State): void {
     setTimeout(() => {
       this.engine.dispatchState(this.getConsumers(), state);
-      this.engine.dispatchInterest(stateInterest(this.id));
+      this.engine.dispatchInterest(stateChangeInterest(this.id));
     });
   }
 
