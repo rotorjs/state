@@ -8,6 +8,7 @@ export * from './StateConsumer';
 export * from './StateEngine';
 export * from './StateEvent';
 export * from './StateEventTarget';
+export * from './StateReducer';
 export * from './SubscribeStateEvent';
 export * from './TypedEventTarget';
 export * from './UnsubscribeStateEvent';

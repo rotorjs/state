@@ -10,7 +10,10 @@ attachWorker(engine, self, { signal });
 engine.addEventListener('action', (event) => {
   console.log('worker: action', event.action, event.emitter);
 
-  if (event.action === 'stop') controller.abort();
+  if (event.action === 'stop') {
+    engine.stop();
+    controller.abort();
+  }
 });
 
 engine.addEventListener('interest', (event) => {
