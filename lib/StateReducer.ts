@@ -13,6 +13,7 @@ export abstract class StateReducer<
 > {
   #engine;
   #id;
+  #descriptor;
   #consumers: { [id: string]: boolean } = {};
   #interests: { [interest: string]: boolean } = {};
   #hasState = false;
@@ -25,6 +26,7 @@ export abstract class StateReducer<
   constructor(engine: Engine, descriptor: StateDescriptor) {
     this.#engine = engine;
     this.#id = this.engine.getReducerID(descriptor);
+    this.#descriptor = descriptor;
 
     const signal = this.signal;
 
@@ -39,6 +41,10 @@ export abstract class StateReducer<
 
   get engine(): Engine {
     return this.#engine;
+  }
+
+  get descriptor(): StateDescriptor {
+    return this.#descriptor;
   }
 
   get debounce(): number {
