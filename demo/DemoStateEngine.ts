@@ -53,20 +53,18 @@ export class DemoStateEngine extends StateEngine<
   DemoState,
   DemoAction
 > {
-  constructor() {
-    super();
+  protected onAction(action: DemoAction): void {
+    super.onAction(action);
 
-    const signal = this.signal;
+    switch (action) {
+      case 'demo action':
+        console.log('got demo action');
 
-    this.addEventListener(
-      'action',
-      () => {
         setTimeout(() => {
           this.dispatchInterest('demo interest');
         }, 5000);
-      },
-      { signal },
-    );
+        return;
+    }
   }
 
   getState(other: boolean): DemoState {
