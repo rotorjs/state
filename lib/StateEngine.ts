@@ -1,4 +1,4 @@
-import type { StateCallback } from './StateCallback';
+import { stateInterest } from './interests';
 import { StateEventTarget } from './StateEventTarget';
 
 export abstract class StateReducer<
@@ -12,7 +12,7 @@ export abstract class StateReducer<
   >,
 > {
   #engine;
-  #callback;
+  #id;
   #consumers: { [id: string]: boolean } = {};
   #interests: { [interest: string]: boolean } = {};
   #hasState = false;
@@ -22,9 +22,9 @@ export abstract class StateReducer<
   #queue: Promise<void> = Promise.resolve();
   #controller = new AbortController();
 
-  constructor(engine: Engine, callback: StateCallback<State>) {
+  constructor(engine: Engine, descriptor: StateDescriptor) {
     this.#engine = engine;
-    this.#callback = callback;
+    this.#id = this.engine.getReducerID(descriptor);
 
     const signal = this.signal;
 
@@ -53,7 +53,10 @@ export abstract class StateReducer<
     this.#consumers[consumer] = true;
 
     if (!this.signal.aborted && this.#hasState)
-      this.engine.dispatchState([consumer], this.#state!);
+      setTimeout(() => {
+        if (this.hasConsumer(consumer))
+          this.engine.dispatchState([consumer], this.#state!);
+      });
   }
 
   hasConsumer(consumer: string): boolean {
@@ -140,7 +143,10 @@ export abstract class StateReducer<
   }
 
   protected onState(state: State): void {
-    this.#callback(state);
+    setTimeout(() => {
+      this.engine.dispatchState(this.getConsumers(), state);
+      this.engine.dispatchInterest(stateInterest(this.#id));
+    });
   }
 
   stop(): void {
@@ -177,11 +183,7 @@ export abstract class StateEngine<
         const id = this.getReducerID(event.descriptor);
 
         if (!Object.hasOwn(this.#reducers, id)) {
-          const reducer = this.createReducer(event.descriptor, (state) => {
-            setTimeout(() => {
-              this.dispatchState(reducer.getConsumers(), state);
-            });
-          });
+          const reducer = this.createReducer(event.descriptor);
           this.#reducers[id] = reducer;
         }
 
@@ -219,11 +221,10 @@ export abstract class StateEngine<
     return this.#controller.signal;
   }
 
-  protected abstract getReducerID(descriptor: StateDescriptor): string;
+  abstract getReducerID(descriptor: StateDescriptor): string;
 
   protected abstract createReducer(
     descriptor: StateDescriptor,
-    callback: StateCallback<State>,
   ): StateReducer<StateDescriptor, State, Action>;
 
   protected onAction(_action: Action): void {}

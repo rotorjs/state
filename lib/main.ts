@@ -2,6 +2,7 @@ export * from './ActionEvent';
 export * from './EmitterEvent';
 export * from './eventTransport';
 export * from './InterestEvent';
+export * from './interests';
 export * from './StateCallback';
 export * from './StateConsumer';
 export * from './StateEngine';

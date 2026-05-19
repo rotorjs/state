@@ -23,14 +23,10 @@ export class DemoStateReducer extends StateReducer<
 > {
   #other: boolean;
 
-  constructor(
-    engine: DemoStateEngine,
-    other: boolean,
-    callback: (state: DemoState) => void,
-  ) {
-    super(engine, callback);
+  constructor(engine: DemoStateEngine, descriptor: DemoStateDescriptor) {
+    super(engine, descriptor);
 
-    this.#other = other;
+    this.#other = descriptor.other;
 
     this.update();
   }
@@ -77,16 +73,15 @@ export class DemoStateEngine extends StateEngine<
     return other ? 'other demo state' : 'demo state';
   }
 
-  protected getReducerID(descriptor: DemoStateDescriptor): string {
+  getReducerID(descriptor: DemoStateDescriptor): string {
     return descriptor.other ? 'other reducer' : 'reducer';
   }
 
   protected createReducer(
     descriptor: DemoStateDescriptor,
-    callback: (state: DemoState) => void,
   ): StateReducer<DemoStateDescriptor, DemoState, 'demo action' | 'stop'> {
     console.log('creating reducer:', this.getReducerID(descriptor));
-    return new DemoStateReducer(this, descriptor.other, callback);
+    return new DemoStateReducer(this, descriptor);
   }
 }
 
