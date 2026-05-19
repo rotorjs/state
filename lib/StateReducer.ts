@@ -43,6 +43,10 @@ export abstract class StateReducer<
     return this.#engine;
   }
 
+  get id(): string {
+    return this.#id;
+  }
+
   get descriptor(): StateDescriptor {
     return this.#descriptor;
   }
@@ -156,7 +160,7 @@ export abstract class StateReducer<
   protected onState(state: State): void {
     setTimeout(() => {
       this.engine.dispatchState(this.getConsumers(), state);
-      this.engine.dispatchInterest(stateInterest(this.#id));
+      this.engine.dispatchInterest(stateInterest(this.id));
     });
   }
 
