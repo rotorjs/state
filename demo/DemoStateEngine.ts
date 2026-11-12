@@ -3,9 +3,7 @@ import { StateEngine, StateReducer, type StateEventTarget } from '@/main';
 export type DemoStateDescriptor = { other: boolean };
 
 export type DemoState =
-  | 'demo state'
-  | 'other demo state'
-  | `extended demo state ${string}`;
+  'demo state' | 'other demo state' | `extended demo state ${string}`;
 
 export type DemoAction = 'demo action' | 'stop';
 
